@@ -25,10 +25,7 @@ curl http://BASE_URL/graph
 
 This uses the Go standard library HTTP server, along with the official Neo4j Go driver.
 
-=== Run locally:
-
-Start your local Neo4j Server (http://neo4j.com/download[Download & Install]), open Neo4j Browser.
-Then install the Movies data-set with `:play movies`, click the statement, and hit the triangular "Run" button.
+=== Run:
 
 Start this application with:
 
@@ -63,3 +60,8 @@ You can search for movies by title or and click on any entry.
 |NEO4J_DATABASE
 |movies
 |===
+
+To run the database locally as well, start your local Neo4j Server (http://neo4j.com/download[Download & Install]), open Neo4j Browser.
+Then install the Movies data-set with `:play movies`, click the statement, and hit the triangular "Run" button.
+
+Then, override the relevant environment variables above.
