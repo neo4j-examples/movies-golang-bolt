@@ -145,9 +145,7 @@ func movieHandlerFunc(driver neo4j.Driver, database string) func(http.ResponseWr
 		for result.Next() {
 			record := result.Record()
 			title, _ := record.Get("title")
-			movie = Movie{
-				Title: title.(string),
-			}
+			movie.Title = title.(string)
 			name, _ := record.Get("name")
 			job, _ := record.Get("job")
 			role, _ := record.Get("role")
