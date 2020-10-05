@@ -1,0 +1,65 @@
+== Neo4j Movies Example Application
+
+=== Stack
+
+* Go and https://github.com/neo4j/neo4j-go-driver[official Go driver]
+* Neo4j Server
+* Frontend: jquery, bootstrap, http://d3js.org/[d3.js]
+
+=== Endpoints:
+
+Get Movie
+
+----
+// JSON object for single movie with cast
+curl http://BASE_URL/movie/The%20Matrix
+
+// list of JSON objects for movie search results
+curl http://BASE_URL/search?q=matrix
+
+// JSON object for whole graph viz (nodes, links - arrays)
+curl http://BASE_URL/graph
+----
+
+=== Setup
+
+This uses the Go standard library HTTP server, along with the official Neo4j Go driver.
+
+=== Run locally:
+
+Start your local Neo4j Server (http://neo4j.com/download[Download & Install]), open Neo4j Browser.
+Then install the Movies data-set with `:play movies`, click the statement, and hit the triangular "Run" button.
+
+Start this application with:
+
+[source,shell]
+----
+go run server.go
+----
+
+Go to http://localhost:8080
+
+You can search for movies by title or and click on any entry.
+
+=== Configuration options
+
+[%header,cols=2*]
+|===
+|Environment variable name
+|Default value (or N/A)
+
+|PORT
+|8080
+
+|NEO4J_HOST
+|demo.neo4jlabs.com/movies
+
+|NEO4J_USER
+|movies
+
+|NEO4J_PASS
+|movies
+
+|NEO4J_DATABASE
+|movies
+|===
