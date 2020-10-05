@@ -87,7 +87,7 @@
                 function (data) {
                     if (!data) return;
                     $("#title").text(data.title);
-                    $("#poster").attr("src","http://neo4j-documentation.github.io/developer-resources/language-guides/assets/posters/"+encodeURIComponent(data.title)+".jpg");
+                    $("#poster").attr("src","https://neo4j-documentation.github.io/developer-resources/language-guides/assets/posters/"+encodeURIComponent(data.title)+".jpg");
                     var $list = $("#crew").empty();
                     data.cast.forEach(function (cast) {
                         console.dir(cast);
