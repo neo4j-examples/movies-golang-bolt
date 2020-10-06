@@ -1,5 +1,7 @@
 == Neo4j Movies Example Application
 
+image::https://github.com/neo4j-examples/movies-golang-bolt/workflows/Go/badge.svg[CI]
+
 === Stack
 
 * Go and https://github.com/neo4j/neo4j-go-driver[official Go driver]
