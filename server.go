@@ -285,6 +285,6 @@ func lookupEnvOrGetDefault(key string, defaultValue string) string {
 
 func unsafeClose(closeable io.Closer) {
 	if err := closeable.Close(); err != nil {
-		log.Fatal(fmt.Errorf("could not close resource: %w", err.Error()))
+		log.Fatal(fmt.Errorf("could not close resource: %w", err))
 	}
 }
