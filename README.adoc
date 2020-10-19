@@ -50,13 +50,13 @@ You can search for movies by title or and click on any entry.
 |PORT
 |8080
 
-|NEO4J_HOST
+|NEO4J_URI
 |demo.neo4jlabs.com/movies
 
 |NEO4J_USER
 |movies
 
-|NEO4J_PASS
+|NEO4J_PASSWORD
 |movies
 
 |NEO4J_DATABASE
