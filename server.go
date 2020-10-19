@@ -271,9 +271,9 @@ func parseLimit(req *http.Request) int {
 
 func parseConfiguration() *Neo4jConfiguration {
 	return &Neo4jConfiguration{
-		Url:      fmt.Sprintf("bolt://%s", lookupEnvOrGetDefault("NEO4J_HOST", "demo.neo4jlabs.com/movies")),
+		Url:      fmt.Sprintf("bolt://%s", lookupEnvOrGetDefault("NEO4J_URI", "demo.neo4jlabs.com/movies")),
 		Username: lookupEnvOrGetDefault("NEO4J_USER", "movies"),
-		Password: lookupEnvOrGetDefault("NEO4J_PASS", "movies"),
+		Password: lookupEnvOrGetDefault("NEO4J_PASSWORD", "movies"),
 		Database: lookupEnvOrGetDefault("NEO4J_DATABASE", "movies"),
 	}
 }
