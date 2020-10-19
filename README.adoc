@@ -51,7 +51,7 @@ You can search for movies by title or and click on any entry.
 |8080
 
 |NEO4J_URI
-|demo.neo4jlabs.com/movies
+|neo4j+s://demo.neo4jlabs.com
 
 |NEO4J_USER
 |movies
