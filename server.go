@@ -91,6 +91,7 @@ func searchHandlerFunc(driver neo4j.Driver, database string) func(http.ResponseW
 		result, err := session.Run(query, map[string]interface{}{"title": titleRegex})
 		if err != nil {
 			log.Println("error querying search:", err)
+			return
 		}
 		var movieResults []MovieResult
 		for result.Next() {
@@ -140,6 +141,7 @@ func movieHandlerFunc(driver neo4j.Driver, database string) func(http.ResponseWr
 		result, err := session.Run(query, map[string]interface{}{"title": title})
 		if err != nil {
 			log.Println("error querying movie:", err)
+			return
 		}
 		var movie Movie
 		for result.Next() {
@@ -194,6 +196,7 @@ func graphHandler(driver neo4j.Driver, database string) func(http.ResponseWriter
 		result, err := session.Run(query, map[string]interface{}{"limit": limit})
 		if err != nil {
 			log.Println("error querying graph:", err)
+			return
 		}
 
 		d3Resp := D3Response{}
