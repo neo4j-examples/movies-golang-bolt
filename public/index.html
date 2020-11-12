@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="http://neo4j-documentation.github.io/developer-resources/language-guides/assets/css/main.css">
+    <link rel="stylesheet" href="https://neo4j-documentation.github.io/developer-resources/language-guides/assets/css/main.css">
     <title>Neo4j Movies</title>
 </head>
 
@@ -117,12 +117,12 @@
 </script>
 
 <script type="text/javascript">
-    var width = 800, height = 800;
+    const width = 800, height = 800;
 
-    var force = d3.layout.force()
+    const force = d3.layout.force()
         .charge(-200).linkDistance(30).size([width, height]);
 
-    var svg = d3.select("#graph").append("svg")
+    const svg = d3.select("#graph").append("svg")
         .attr("width", "100%").attr("height", "100%")
         .attr("pointer-events", "all");
 
@@ -131,11 +131,11 @@
 
         force.nodes(graph.nodes).links(graph.links).start();
 
-        var link = svg.selectAll(".link")
+        const link = svg.selectAll(".link")
             .data(graph.links).enter()
             .append("line").attr("class", "link");
 
-        var node = svg.selectAll(".node")
+        const node = svg.selectAll(".node")
             .data(graph.nodes).enter()
             .append("circle")
             .attr("class", function (d) { return "node "+d.label })
