@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/neo4j/neo4j-go-driver/neo4j"
+	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"io"
 	"io/ioutil"
 	"log"
@@ -54,8 +54,7 @@ type Neo4jConfiguration struct {
 }
 
 func (nc *Neo4jConfiguration) newDriver() (neo4j.Driver, error) {
-	unencrypted := func(conf *neo4j.Config) { conf.Encrypted = false }
-	return neo4j.NewDriver(nc.Url, neo4j.BasicAuth(nc.Username, nc.Password, ""), unencrypted)
+	return neo4j.NewDriver(nc.Url, neo4j.BasicAuth(nc.Username, nc.Password, ""))
 }
 
 func defaultHandler(w http.ResponseWriter, req *http.Request) {
@@ -73,14 +72,10 @@ func searchHandlerFunc(driver neo4j.Driver, database string) func(http.ResponseW
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		session, err := driver.NewSession(neo4j.SessionConfig{
+		session := driver.NewSession(neo4j.SessionConfig{
 			AccessMode:   neo4j.AccessModeRead,
 			DatabaseName: database,
 		})
-		if err != nil {
-			internalServerError(w, err)
-			return
-		}
 		defer unsafeClose(session)
 
 		query := `MATCH (movie:Movie) 
@@ -117,14 +112,10 @@ func movieHandlerFunc(driver neo4j.Driver, database string) func(http.ResponseWr
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		session, err := driver.NewSession(neo4j.SessionConfig{
+		session := driver.NewSession(neo4j.SessionConfig{
 			AccessMode:   neo4j.AccessModeRead,
 			DatabaseName: database,
 		})
-		if err != nil {
-			internalServerError(w, err)
-			return
-		}
 		defer unsafeClose(session)
 
 		query := `MATCH (movie:Movie {title:$title})
@@ -178,14 +169,10 @@ func graphHandler(driver neo4j.Driver, database string) func(http.ResponseWriter
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		session, err := driver.NewSession(neo4j.SessionConfig{
+		session := driver.NewSession(neo4j.SessionConfig{
 			AccessMode:   neo4j.AccessModeRead,
 			DatabaseName: database,
 		})
-		if err != nil {
-			internalServerError(w, err)
-			return
-		}
 		defer unsafeClose(session)
 
 		limit := parseLimit(req)
@@ -249,12 +236,6 @@ func main() {
 		port = "8080"
 	}
 	panic(http.ListenAndServe(":"+port, httpgzip.NewHandler(serveMux)))
-}
-
-func internalServerError(w http.ResponseWriter, err error) {
-	w.WriteHeader(500)
-	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(fmt.Errorf("unexpected error: %w", err).Error()))
 }
 
 func parseLimit(req *http.Request) int {
