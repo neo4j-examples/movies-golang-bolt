@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 
@@ -61,10 +62,10 @@ func defaultHandler(w http.ResponseWriter, req *http.Request) {
 	if body, err := ioutil.ReadFile("public/index.html"); err != nil {
 		w.WriteHeader(500)
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte(err.Error()))
+		_, _ = w.Write([]byte(err.Error()))
 	} else {
 		w.Header().Set("Content-Type", "text/html;charset=utf-8")
-		w.Write(body)
+		_, _ = w.Write(body)
 	}
 }
 
@@ -78,29 +79,33 @@ func searchHandlerFunc(driver neo4j.Driver, database string) func(http.ResponseW
 		})
 		defer unsafeClose(session)
 
-		query := `MATCH (movie:Movie) 
+		movieResults, err := session.ReadTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+			records, err := tx.Run(
+				`MATCH (movie:Movie) 
 				 WHERE movie.title =~ $title
-				 RETURN movie.title as title, movie.tagline as tagline, movie.released as released`
-
-		titleRegex := fmt.Sprintf("(?i).*%s.*", req.URL.Query()["q"][0])
-		result, err := session.Run(query, map[string]interface{}{"title": titleRegex})
+				 RETURN movie.title as title, movie.tagline as tagline, movie.released as released`,
+				map[string]interface{}{"title": fmt.Sprintf("(?i).*%s.*", req.URL.Query()["q"][0])})
+			if err != nil {
+				return nil, err
+			}
+			var results []MovieResult
+			for records.Next() {
+				record := records.Record()
+				released, _ := record.Get("released")
+				title, _ := record.Get("title")
+				tagline, _ := record.Get("tagline")
+				results = append(results, MovieResult{Movie{
+					Released: released.(int64),
+					Title:    title.(string),
+					Tagline:  tagline.(string),
+				}})
+			}
+			return results, nil
+		})
 		if err != nil {
 			log.Println("error querying search:", err)
 			return
 		}
-		var movieResults []MovieResult
-		for result.Next() {
-			record := result.Record()
-			released, _ := record.Get("released")
-			title, _ := record.Get("title")
-			tagline, _ := record.Get("tagline")
-			movieResults = append(movieResults, MovieResult{Movie{
-				Released: released.(int64),
-				Title:    title.(string),
-				Tagline:  tagline.(string),
-			}})
-		}
-
 		err = json.NewEncoder(w).Encode(movieResults)
 		if err != nil {
 			log.Println("error writing search response:", err)
@@ -118,7 +123,10 @@ func movieHandlerFunc(driver neo4j.Driver, database string) func(http.ResponseWr
 		})
 		defer unsafeClose(session)
 
-		query := `MATCH (movie:Movie {title:$title})
+		movie, err := session.ReadTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+			title, _ := url.QueryUnescape(req.URL.Path[len("/movie/"):])
+			records, err := tx.Run(
+				`MATCH (movie:Movie {title:$title})
 				  OPTIONAL MATCH (movie)<-[r]-(person:Person)
 				  WITH movie.title as title,
 						 collect({name:person.name,
@@ -126,30 +134,32 @@ func movieHandlerFunc(driver neo4j.Driver, database string) func(http.ResponseWr
 						 role:r.roles}) as cast 
 				  LIMIT 1
 				  UNWIND cast as c 
-				  RETURN title, c.name as name, c.job as job, c.role as role`
-
-		title := req.URL.Path[len("/movie/"):]
-		result, err := session.Run(query, map[string]interface{}{"title": title})
+				  RETURN title, c.name as name, c.job as job, c.role as role`,
+				map[string]interface{}{"title": title})
+			if err != nil {
+				return nil, err
+			}
+			var result Movie
+			for records.Next() {
+				record := records.Record()
+				title, _ := record.Get("title")
+				result.Title = title.(string)
+				name, _ := record.Get("name")
+				job, _ := record.Get("job")
+				role, _ := record.Get("role")
+				switch role.(type) {
+				case []interface{}:
+					result.Cast = append(result.Cast, Person{Name: name.(string), Job: job.(string), Role: toStringSlice(role.([]interface{}))})
+				default: // handle nulls or unexpected stuff
+					result.Cast = append(result.Cast, Person{Name: name.(string), Job: job.(string)})
+				}
+			}
+			return result, nil
+		})
 		if err != nil {
 			log.Println("error querying movie:", err)
 			return
 		}
-		var movie Movie
-		for result.Next() {
-			record := result.Record()
-			title, _ := record.Get("title")
-			movie.Title = title.(string)
-			name, _ := record.Get("name")
-			job, _ := record.Get("job")
-			role, _ := record.Get("role")
-			switch role.(type) {
-			case []interface{}:
-				movie.Cast = append(movie.Cast, Person{Name: name.(string), Job: job.(string), Role: toStringSlice(role.([]interface{}))})
-			default: // handle nulls or unexpected stuff
-				movie.Cast = append(movie.Cast, Person{Name: name.(string), Job: job.(string)})
-			}
-		}
-
 		err = json.NewEncoder(w).Encode(movie)
 		if err != nil {
 			log.Println("error writing movie response:", err)
@@ -180,36 +190,40 @@ func graphHandler(driver neo4j.Driver, database string) func(http.ResponseWriter
 				  RETURN m.title as movie, collect(a.name) as cast
 				  LIMIT $limit `
 
-		result, err := session.Run(query, map[string]interface{}{"limit": limit})
+		d3Resp, err := session.ReadTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+			records, err := tx.Run(query, map[string]interface{}{"limit": limit})
+			if err != nil {
+				return nil, err
+			}
+			result := D3Response{}
+			for records.Next() {
+				record := records.Record()
+				title, _ := record.Get("movie")
+				actors, _ := record.Get("cast")
+				result.Nodes = append(result.Nodes, Node{Title: title.(string), Label: "movie"})
+				movIdx := len(result.Nodes) - 1
+				for _, actor := range actors.([]interface{}) {
+					idx := -1
+					for i, node := range result.Nodes {
+						if actor == node.Title && node.Label == "actor" {
+							idx = i
+							break
+						}
+					}
+					if idx == -1 {
+						result.Nodes = append(result.Nodes, Node{Title: actor.(string), Label: "actor"})
+						result.Links = append(result.Links, Link{Source: len(result.Nodes) - 1, Target: movIdx})
+					} else {
+						result.Links = append(result.Links, Link{Source: idx, Target: movIdx})
+					}
+				}
+			}
+			return result, nil
+		})
 		if err != nil {
 			log.Println("error querying graph:", err)
 			return
 		}
-
-		d3Resp := D3Response{}
-		for result.Next() {
-			record := result.Record()
-			title, _ := record.Get("movie")
-			actors, _ := record.Get("cast")
-			d3Resp.Nodes = append(d3Resp.Nodes, Node{Title: title.(string), Label: "movie"})
-			movIdx := len(d3Resp.Nodes) - 1
-			for _, actor := range actors.([]interface{}) {
-				idx := -1
-				for i, node := range d3Resp.Nodes {
-					if actor == node.Title && node.Label == "actor" {
-						idx = i
-						break
-					}
-				}
-				if idx == -1 {
-					d3Resp.Nodes = append(d3Resp.Nodes, Node{Title: actor.(string), Label: "actor"})
-					d3Resp.Links = append(d3Resp.Links, Link{Source: len(d3Resp.Nodes) - 1, Target: movIdx})
-				} else {
-					d3Resp.Links = append(d3Resp.Links, Link{Source: idx, Target: movIdx})
-				}
-			}
-		}
-
 		err = json.NewEncoder(w).Encode(d3Resp)
 		if err != nil {
 			log.Println("error writing graph response:", err)
