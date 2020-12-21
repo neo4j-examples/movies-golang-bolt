@@ -1,14 +1,20 @@
-== Neo4j Movies Example Application
+== Neo4j Movies Application: Quick Start
 
 image::https://github.com/neo4j-examples/movies-golang-bolt/workflows/Go/badge.svg[CI]
 
-=== Stack
+== The Stack
 
-* Go and https://github.com/neo4j/neo4j-go-driver[official Go driver]
-* Neo4j Server
-* Frontend: jquery, bootstrap, http://d3js.org/[d3.js]
+These are the components of our Web Application:
 
-=== Endpoints:
+* Application Type:         Go-Web Application
+* Web framework:            https://golang.org/pkg/net/http/[Built-in HTTP server]
+* Neo4j Database Connector: https://github.com/neo4j/neo4j-go-driver[Neo4j Go Driver] for Cypher https://neo4j.com/developer/go[Docs]
+* Database:                 Neo4j-Server (4.x) with multi-database
+* Frontend:                 jquery, bootstrap, https://d3js.org/[d3.js]
+
+Provision a database quickly with https://sandbox.neo4j.com/[Neo4j Sandbox] or https://neo4j.com/cloud/aura/[Neo4j Aura].
+
+== Endpoints:
 
 Get Movie
 
@@ -23,11 +29,11 @@ curl http://BASE_URL/search?q=matrix
 curl http://BASE_URL/graph
 ----
 
-=== Setup
+== Setup
 
 This uses the Go standard library HTTP server, along with the official Neo4j Go driver.
 
-=== Run:
+== Run:
 
 Start this application with:
 
@@ -40,7 +46,7 @@ Go to http://localhost:8080
 
 You can search for movies by title or and click on any entry.
 
-=== Configuration options
+== Configuration options
 
 [%header,cols=2*]
 |===
@@ -63,7 +69,7 @@ You can search for movies by title or and click on any entry.
 |movies
 |===
 
-To run the database locally as well, start your local Neo4j Server (http://neo4j.com/download[Download & Install]), open Neo4j Browser.
+To run the database locally as well, start your local Neo4j Server (https://neo4j.com/download[Download & Install]), open Neo4j Browser.
 Then install the Movies data-set with `:play movies`, click the statement, and hit the triangular "Run" button.
 
 Then, override the relevant environment variables above.
