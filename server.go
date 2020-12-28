@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/daaku/go.httpgzip"
 )
@@ -266,11 +267,15 @@ func parseLimit(req *http.Request) int {
 }
 
 func parseConfiguration() *Neo4jConfiguration {
+	database := lookupEnvOrGetDefault("NEO4J_DATABASE", "movies")
+	if !strings.HasPrefix(lookupEnvOrGetDefault("NEO4J_VERSION", ""), "4") {
+		database = ""
+	}
 	return &Neo4jConfiguration{
 		Url:      lookupEnvOrGetDefault("NEO4J_URI", "neo4j+s://demo.neo4jlabs.com"),
 		Username: lookupEnvOrGetDefault("NEO4J_USER", "movies"),
 		Password: lookupEnvOrGetDefault("NEO4J_PASSWORD", "movies"),
-		Database: lookupEnvOrGetDefault("NEO4J_DATABASE", "movies"),
+		Database: database,
 	}
 }
 
