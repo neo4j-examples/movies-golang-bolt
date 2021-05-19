@@ -268,7 +268,7 @@ func parseLimit(req *http.Request) int {
 
 func parseConfiguration() *Neo4jConfiguration {
 	database := lookupEnvOrGetDefault("NEO4J_DATABASE", "movies")
-	if !strings.HasPrefix(lookupEnvOrGetDefault("NEO4J_VERSION", ""), "4") {
+	if !strings.HasPrefix(lookupEnvOrGetDefault("NEO4J_VERSION", "4"), "4") {
 		database = ""
 	}
 	return &Neo4jConfiguration{
