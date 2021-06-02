@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,17 +12,23 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/daaku/go.httpgzip"
+	httpgzip "github.com/daaku/go.httpgzip"
+	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 )
 
 type MovieResult struct {
 	Movie `json:"movie"`
 }
 
+type VoteResult struct {
+	Updates int `json:"updates"`
+}
+
 type Movie struct {
 	Released int64    `json:"released"`
 	Title    string   `json:"title,omitempty"`
 	Tagline  string   `json:"tagline,omitempty"`
+	Votes    int64    `json:"votes,omitempty"`
 	Cast     []Person `json:"cast,omitempty"`
 }
 
@@ -84,7 +89,7 @@ func searchHandlerFunc(driver neo4j.Driver, database string) func(http.ResponseW
 			records, err := tx.Run(
 				`MATCH (movie:Movie) 
 				 WHERE movie.title =~ $title
-				 RETURN movie.title as title, movie.tagline as tagline, movie.released as released`,
+				 RETURN movie.title as title, movie.tagline as tagline, movie.votes as votes, movie.released as released`,
 				map[string]interface{}{"title": fmt.Sprintf("(?i).*%s.*", req.URL.Query()["q"][0])})
 			if err != nil {
 				return nil, err
@@ -95,10 +100,15 @@ func searchHandlerFunc(driver neo4j.Driver, database string) func(http.ResponseW
 				released, _ := record.Get("released")
 				title, _ := record.Get("title")
 				tagline, _ := record.Get("tagline")
+				votes, ok := record.Get("votes")
+				if !ok || votes == nil {
+					votes = int64(0)
+				}
 				results = append(results, MovieResult{Movie{
 					Released: released.(int64),
 					Title:    title.(string),
 					Tagline:  tagline.(string),
+					Votes:    votes.(int64),
 				}})
 			}
 			return results, nil
@@ -164,6 +174,43 @@ func movieHandlerFunc(driver neo4j.Driver, database string) func(http.ResponseWr
 		err = json.NewEncoder(w).Encode(movie)
 		if err != nil {
 			log.Println("error writing movie response:", err)
+		}
+	}
+}
+
+func voteInMovieHandlerFunc(driver neo4j.Driver, database string) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		title, _ := url.QueryUnescape(req.URL.Path[len("/movie/vote/"):])
+
+		session := driver.NewSession(neo4j.SessionConfig{
+			AccessMode:   neo4j.AccessModeWrite,
+			DatabaseName: database,
+		})
+		defer unsafeClose(session)
+
+		voteResult, err := session.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+			result, err := tx.Run(
+				`MATCH (m:Movie {title: $title}) 
+				WITH m, (CASE WHEN exists(m.votes) THEN m.votes ELSE 0 END) AS currentVotes
+				SET m.votes = currentVotes + 1;`,
+				map[string]interface{}{"title": title})
+			if err != nil {
+				return nil, err
+			}
+			var summary, _ = result.Consume()
+			var voteResult VoteResult
+			voteResult.Updates = summary.Counters().PropertiesSet()
+
+			return voteResult, nil
+		})
+		if err != nil {
+			log.Println("error voting for movie:", err)
+			return
+		}
+		err = json.NewEncoder(w).Encode(voteResult)
+		if err != nil {
+			log.Println("error writing volte result response:", err)
 		}
 	}
 }
@@ -242,6 +289,7 @@ func main() {
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("/", defaultHandler)
 	serveMux.HandleFunc("/search", searchHandlerFunc(driver, configuration.Database))
+	serveMux.HandleFunc("/movie/vote/", voteInMovieHandlerFunc(driver, configuration.Database))
 	serveMux.HandleFunc("/movie/", movieHandlerFunc(driver, configuration.Database))
 	serveMux.HandleFunc("/graph", graphHandler(driver, configuration.Database))
 
