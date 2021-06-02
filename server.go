@@ -205,7 +205,7 @@ func voteInMovieHandlerFunc(driver neo4j.Driver, database string) func(http.Resp
 			return voteResult, nil
 		})
 		if err != nil {
-			log.Println("error votigin movie:", err)
+			log.Println("error voting for movie:", err)
 			return
 		}
 		err = json.NewEncoder(w).Encode(voteResult)
