@@ -19,8 +19,8 @@ github.com/google/go-cmp v0.3.1/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMyw
 github.com/google/go-cmp v0.4.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
-github.com/neo4j/neo4j-go-driver/v4 v4.3.1 h1:LpEEgHTI4yZhGszKX01Y0pfFdZYJDI3kBIv7QXw9ItQ=
-github.com/neo4j/neo4j-go-driver/v4 v4.3.1/go.mod h1:KvFhWkP45+y7D4WHLsr2mDWYkoQLcVoWb+LERC89y2Q=
+github.com/neo4j/neo4j-go-driver/v4 v4.3.2 h1:6doSNiQ1X73nLlJebmu5lGz3/HC+2nCnAD43KaneyRQ=
+github.com/neo4j/neo4j-go-driver/v4 v4.3.2/go.mod h1:KvFhWkP45+y7D4WHLsr2mDWYkoQLcVoWb+LERC89y2Q=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
