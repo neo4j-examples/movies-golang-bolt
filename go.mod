@@ -4,5 +4,5 @@ go 1.15
 
 require (
 	github.com/daaku/go.httpgzip v0.0.0-20130226210307-fd996995061c
-	github.com/neo4j/neo4j-go-driver/v4 v4.3.2
+	github.com/neo4j/neo4j-go-driver/v4 v4.3.3
 )
