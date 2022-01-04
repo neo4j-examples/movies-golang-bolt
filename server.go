@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 
-	httpgzip "github.com/daaku/go.httpgzip"
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 )
 
@@ -299,7 +298,7 @@ func main() {
 		port = "8080"
 	}
 	fmt.Printf("Running on port %s, database is at %s\n", port, configuration.Url)
-	panic(http.ListenAndServe(":"+port, httpgzip.NewHandler(serveMux)))
+	panic(http.ListenAndServe(":"+port, serveMux))
 }
 
 func parseLimit(req *http.Request) int {
