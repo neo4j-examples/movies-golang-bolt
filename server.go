@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -64,7 +66,10 @@ func (nc *Neo4jConfiguration) newDriver() (neo4j.Driver, error) {
 }
 
 func defaultHandler(w http.ResponseWriter, req *http.Request) {
-	if body, err := ioutil.ReadFile("public/index.html"); err != nil {
+	_, file, _, _ := runtime.Caller(0)
+	page := filepath.Join(filepath.Dir(file), "public", "index.html")
+	fmt.Printf("Serving HTML file %s\n", page)
+	if body, err := ioutil.ReadFile(page); err != nil {
 		w.WriteHeader(500)
 		w.Header().Set("Content-Type", "text/plain")
 		_, _ = w.Write([]byte(err.Error()))
