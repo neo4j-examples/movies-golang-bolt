@@ -16,7 +16,7 @@ jobs:
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:
-        go-version: ^1.15
+        go-version: ^1.17
       id: go
 
     - name: Check out code into the Go module directory
@@ -58,7 +58,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ^1.15
+          go-version: ^1.17
         id: go
       - name: Download dataset
         run: curl --fail --output /tmp/movies.cypher https://raw.githubusercontent.com/neo4j-graph-examples/movies/8508a527d8aa1c261b0978d1d5b3156d4ac8328e/scripts/import.cypher
