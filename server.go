@@ -196,8 +196,7 @@ func voteInMovieHandlerFunc(driver neo4j.Driver, database string) func(http.Resp
 		voteResult, err := session.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
 			result, err := tx.Run(
 				`MATCH (m:Movie {title: $title}) 
-				WITH m, (CASE WHEN exists(m.votes) THEN m.votes ELSE 0 END) AS currentVotes
-				SET m.votes = currentVotes + 1;`,
+				SET m.votes = COALESCE(m.votes, 0) + 1`,
 				map[string]interface{}{"title": title})
 			if err != nil {
 				return nil, err
