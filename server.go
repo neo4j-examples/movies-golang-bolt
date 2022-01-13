@@ -92,9 +92,9 @@ func searchHandlerFunc(driver neo4j.Driver, database string) func(http.ResponseW
 		movieResults, err := session.ReadTransaction(func(tx neo4j.Transaction) (interface{}, error) {
 			records, err := tx.Run(
 				`MATCH (movie:Movie) 
-				 WHERE movie.title =~ $title
+				 WHERE TOLOWER(movie.title) CONTAINS TOLOWER($title)
 				 RETURN movie.title as title, movie.tagline as tagline, movie.votes as votes, movie.released as released`,
-				map[string]interface{}{"title": fmt.Sprintf("(?i).*%s.*", req.URL.Query()["q"][0])})
+				map[string]interface{}{"title": req.URL.Query().Get("q")})
 			if err != nil {
 				return nil, err
 			}
