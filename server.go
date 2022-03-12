@@ -103,7 +103,10 @@ func searchHandlerFunc(driver neo4j.Driver, database string) func(http.ResponseW
 				record := records.Record()
 				released, _ := record.Get("released")
 				title, _ := record.Get("title")
-				tagline, _ := record.Get("tagline")
+				tagline, ok := record.Get("tagline")
+				if !ok {
+					tagline = ""
+				}
 				votes, ok := record.Get("votes")
 				if !ok || votes == nil {
 					votes = int64(0)
