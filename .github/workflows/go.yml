@@ -58,7 +58,7 @@ jobs:
       - name: Download dataset
         run: curl --fail --output /tmp/movies.cypher https://raw.githubusercontent.com/neo4j-graph-examples/movies/8508a527d8aa1c261b0978d1d5b3156d4ac8328e/scripts/import.cypher
       - name: Import dataset
-        run: docker exec --interactive neo4j-e2e cypher-shell -u neo4j -p abcde --file /movies/movies.cypher
+        run: docker exec --interactive neo4j-e2e cypher-shell -u neo4j -p 'letmein!' --file /movies/movies.cypher
       - name: Check out project sources
         uses: actions/checkout@v2
       - name: Check out test harness sources
