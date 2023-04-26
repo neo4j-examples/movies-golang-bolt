@@ -43,7 +43,7 @@ jobs:
           NEO4J_AUTH: "neo4j/letmein!"
         options: >-
           --name neo4j-e2e
-          --health-cmd "cypher-shell -u neo4j -p abcde 'RETURN 1'"
+          --health-cmd "cypher-shell -u neo4j -p 'letmein!' 'RETURN 1'"
           --health-interval 10s
           --health-timeout 5s
           --health-start-period 10s
