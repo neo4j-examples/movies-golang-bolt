@@ -18,7 +18,7 @@ jobs:
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:
-        go-version: ^1.17
+        go-version: ^1.20
       id: go
 
     - name: Check out code into the Go module directory
@@ -40,14 +40,14 @@ jobs:
     strategy:
       matrix:
         node-version: [ 16.x ]
-        neo4j-version: [ "3.5", "3.5-enterprise", "4.4", "4.4-enterprise" ]
+        neo4j-version: [ "3.5", "3.5-enterprise", "4.4", "4.4-enterprise", "5", "5-enterprise" ]
     services:
       neo4j:
         image: neo4j:${{ matrix.neo4j-version }}
         ports: [ "7687:7687" ]
         env:
           NEO4J_ACCEPT_LICENSE_AGREEMENT: yes
-          NEO4J_AUTH: "neo4j/abcde"
+          NEO4J_AUTH: "neo4j/letmein!"
         options: >-
           --name neo4j-e2e
           --health-cmd "cypher-shell -u neo4j -p abcde 'RETURN 1'"
@@ -60,7 +60,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ^1.17
+          go-version: ^1.20
         id: go
       - name: Download dataset
         run: curl --fail --output /tmp/movies.cypher https://raw.githubusercontent.com/neo4j-graph-examples/movies/8508a527d8aa1c261b0978d1d5b3156d4ac8328e/scripts/import.cypher
@@ -84,7 +84,7 @@ jobs:
           NEO4J_URI: bolt://localhost
           NEO4J_DATABASE: "neo4j"
           NEO4J_USER: neo4j
-          NEO4J_PASSWORD: abcde
+          NEO4J_PASSWORD: "letmein!"
         with:
           working-directory: e2e
           browser: chrome
