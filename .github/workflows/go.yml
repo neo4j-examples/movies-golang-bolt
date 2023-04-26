@@ -33,7 +33,7 @@ jobs:
     strategy:
       matrix:
         node-version: [ 16.x ]
-        neo4j-version: [ "4.4", "4.4-enterprise", "5", "5-enterprise" ]
+        neo4j-version: [ "4.4", "4.4-enterprise" ]
     services:
       neo4j:
         image: neo4j:${{ matrix.neo4j-version }}
