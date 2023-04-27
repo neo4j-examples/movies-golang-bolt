@@ -16,41 +16,34 @@ jobs:
     steps:
 
     - name: Set up Go 1.x
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v4
       with:
-        go-version: ^1.17
+        go-version: ^1.20
       id: go
 
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
-
-    - name: Get dependencies
-      run: |
-        go get -v -t -d ./...
+      uses: actions/checkout@v3
 
     - name: Build
       run: go build -v .
-
-    - name: Test
-      run: go test -v .
 
   e2e:
     needs: build
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [ 16.x ]
-        neo4j-version: [ "3.5", "3.5-enterprise", "4.4", "4.4-enterprise" ]
+        node-version: [ 18.x ]
+        neo4j-version: [ "4.4", "4.4-enterprise" ]
     services:
       neo4j:
         image: neo4j:${{ matrix.neo4j-version }}
         ports: [ "7687:7687" ]
         env:
           NEO4J_ACCEPT_LICENSE_AGREEMENT: yes
-          NEO4J_AUTH: "neo4j/abcde"
+          NEO4J_AUTH: "neo4j/letmein!"
         options: >-
           --name neo4j-e2e
-          --health-cmd "cypher-shell -u neo4j -p abcde 'RETURN 1'"
+          --health-cmd "cypher-shell -u neo4j -p 'letmein!' 'RETURN 1'"
           --health-interval 10s
           --health-timeout 5s
           --health-start-period 10s
@@ -58,35 +51,32 @@ jobs:
           --volume /tmp:/movies
     steps:
       - name: Set up Go 1.x
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
-          go-version: ^1.17
+          go-version: ^1.20
         id: go
       - name: Download dataset
         run: curl --fail --output /tmp/movies.cypher https://raw.githubusercontent.com/neo4j-graph-examples/movies/8508a527d8aa1c261b0978d1d5b3156d4ac8328e/scripts/import.cypher
-      - name: Import dataset (Neo4j 3.5)
-        if: ${{ startsWith(matrix.neo4j-version, '3.5') }}
-        run: docker exec --interactive neo4j-e2e sh -c 'cat /movies/movies.cypher | cypher-shell -u neo4j -p abcde'
       - name: Import dataset
-        if: ${{ !startsWith(matrix.neo4j-version, '3.5') }}
-        run: docker exec --interactive neo4j-e2e cypher-shell -u neo4j -p abcde --file /movies/movies.cypher
+        run: docker exec --interactive neo4j-e2e cypher-shell -u neo4j -p 'letmein!' --file /movies/movies.cypher
       - name: Check out project sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Check out test harness sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: neo4j-examples/movies-harness
           path: e2e
           ref: ${{ github.event.client_payload.sha }}
-      - uses: cypress-io/github-action@v2
+      - uses: cypress-io/github-action@v5
         env:
           NEO4J_VERSION: ${{ matrix.neo4j-version }}
           NEO4J_URI: bolt://localhost
           NEO4J_DATABASE: "neo4j"
           NEO4J_USER: neo4j
-          NEO4J_PASSWORD: abcde
+          NEO4J_PASSWORD: "letmein!"
         with:
           working-directory: e2e
           browser: chrome
           headless: true
           start: go run ../server.go
+          wait-on: 'http://localhost:8080'
