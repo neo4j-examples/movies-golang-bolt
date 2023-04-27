@@ -9,7 +9,7 @@ These are the components of our Web Application:
 * Application Type:         Go-Web Application
 * Web framework:            https://golang.org/pkg/net/http/[Built-in HTTP server]
 * Neo4j Database Connector: https://github.com/neo4j/neo4j-go-driver[Neo4j Go Driver] for Cypher https://neo4j.com/developer/go[Docs]
-* Database:                 Neo4j-Server (4.x) with multi-database
+* Database:                 Neo4j-Server (4.4 or later) with multi-database
 * Frontend:                 jquery, bootstrap, https://d3js.org/[d3.js]
 
 Provision a database quickly with https://sandbox.neo4j.com/?usecase=movies[Neo4j Sandbox] or https://neo4j.com/cloud/aura/[Neo4j Aura].
