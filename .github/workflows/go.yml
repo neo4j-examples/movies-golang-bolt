@@ -79,4 +79,4 @@ jobs:
           browser: chrome
           headless: true
           start: go run ../server.go
-          wait-on: 'http://127.0.0.1:8080'
+          wait-on: 'http://localhost:8080'
