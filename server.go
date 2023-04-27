@@ -82,18 +82,13 @@ func searchHandlerFunc(ctx context.Context, driver neo4j.DriverWithContext, data
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		session := driver.NewSession(ctx, neo4j.SessionConfig{
-			AccessMode:   neo4j.AccessModeRead,
-			DatabaseName: database,
-		})
-		defer unsafeClose(ctx, session)
-
 		result, err := neo4j.ExecuteQuery(ctx, driver, `MATCH (movie:Movie)
 				 WHERE toLower(movie.title) CONTAINS toLower($title)
 				 RETURN movie.title AS title, movie.tagline AS tagline, movie.votes AS votes, movie.released AS released`,
 			map[string]interface{}{"title": req.URL.Query().Get("q")},
 			neo4j.EagerResultTransformer,
-			neo4j.ExecuteQueryWithReadersRouting())
+			neo4j.ExecuteQueryWithReadersRouting(),
+			neo4j.ExecuteQueryWithDatabase(database))
 		if err != nil {
 			log.Println("error querying search:", err)
 			return
@@ -118,12 +113,6 @@ func movieHandlerFunc(ctx context.Context, driver neo4j.DriverWithContext, datab
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		session := driver.NewSession(ctx, neo4j.SessionConfig{
-			AccessMode:   neo4j.AccessModeRead,
-			DatabaseName: database,
-		})
-		defer unsafeClose(ctx, session)
-
 		title, _ := url.QueryUnescape(req.URL.Path[len("/movie/"):])
 		result, err := neo4j.ExecuteQuery(ctx, driver, `MATCH (movie:Movie {title:$title})
 				OPTIONAL MATCH (movie)<-[r]-(person:Person)
@@ -138,7 +127,8 @@ func movieHandlerFunc(ctx context.Context, driver neo4j.DriverWithContext, datab
 				RETURN title, c.name as name, c.job as job, c.role as role`,
 			map[string]interface{}{"title": title},
 			neo4j.EagerResultTransformer,
-			neo4j.ExecuteQueryWithReadersRouting())
+			neo4j.ExecuteQueryWithReadersRouting(),
+			neo4j.ExecuteQueryWithDatabase(database))
 
 		var movie Movie
 		for _, record := range result.Records {
@@ -169,16 +159,12 @@ func voteInMovieHandlerFunc(ctx context.Context, driver neo4j.DriverWithContext,
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		session := driver.NewSession(ctx, neo4j.SessionConfig{
-			DatabaseName: database,
-		})
-		defer unsafeClose(ctx, session)
-
 		title, _ := url.QueryUnescape(req.URL.Path[len("/movie/vote/"):])
 		result, err := neo4j.ExecuteQuery(ctx, driver, `MATCH (m:Movie {title: $title})
 				SET m.votes = coalesce(m.votes, 0) + 1`,
 			map[string]interface{}{"title": title},
-			neo4j.EagerResultTransformer)
+			neo4j.EagerResultTransformer,
+			neo4j.ExecuteQueryWithDatabase(database))
 
 		var vote VoteResult
 		vote.Updates = result.Summary.Counters().PropertiesSet()
@@ -198,18 +184,13 @@ func graphHandler(ctx context.Context, driver neo4j.DriverWithContext, database 
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		session := driver.NewSession(ctx, neo4j.SessionConfig{
-			AccessMode:   neo4j.AccessModeRead,
-			DatabaseName: database,
-		})
-		defer unsafeClose(ctx, session)
-
 		result, err := neo4j.ExecuteQuery(ctx, driver, `MATCH (m:Movie)<-[:ACTED_IN]-(a:Person)
 				  RETURN m.title AS movie, collect(a.name) AS cast
 				  LIMIT $limit `,
 			map[string]interface{}{"limit": parseLimit(req)},
 			neo4j.EagerResultTransformer,
-			neo4j.ExecuteQueryWithReadersRouting())
+			neo4j.ExecuteQueryWithReadersRouting(),
+			neo4j.ExecuteQueryWithDatabase(database))
 
 		var d3Response D3Response
 		for _, record := range result.Records {
