@@ -1,2 +1,2 @@
-github.com/neo4j/neo4j-go-driver/v5 v5.7.0 h1:Z9kcdzPsqJbNb5YS9ZAMhMar2aUD5eqheLBNEG8YYhc=
-github.com/neo4j/neo4j-go-driver/v5 v5.7.0/go.mod h1:Vff8OwT7QpLm7L2yYr85XNWe9Rbqlbeb9asNXJTHO4k=
+github.com/neo4j/neo4j-go-driver/v5 v5.8.0 h1:I+jtnFbbN9FvRP5etOsrdJNNEThHUCe6pO0MFk1md04=
+github.com/neo4j/neo4j-go-driver/v5 v5.8.0/go.mod h1:Vff8OwT7QpLm7L2yYr85XNWe9Rbqlbeb9asNXJTHO4k=
