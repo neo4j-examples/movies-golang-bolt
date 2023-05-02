@@ -67,7 +67,6 @@ func (nc *Neo4jConfiguration) newDriver() (neo4j.DriverWithContext, error) {
 func defaultHandler(w http.ResponseWriter, req *http.Request) {
 	_, file, _, _ := runtime.Caller(0)
 	page := filepath.Join(filepath.Dir(file), "public", "index.html")
-	fmt.Printf("Serving HTML file %s\n", page)
 	if body, err := os.ReadFile(page); err != nil {
 		w.WriteHeader(500)
 		w.Header().Set("Content-Type", "text/plain")
