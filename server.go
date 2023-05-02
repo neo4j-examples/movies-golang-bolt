@@ -193,24 +193,21 @@ func graphHandler(ctx context.Context, driver neo4j.DriverWithContext, database 
 			neo4j.ExecuteQueryWithDatabase(database))
 
 		var d3Response D3Response
+		allActors := make(map[string]int)
 		for _, record := range result.Records {
 			title, _, _ := neo4j.GetRecordValue[string](record, "movie")
-			actors, _, _ := neo4j.GetRecordValue[[]any](record, "cast")
+			cast, _, _ := neo4j.GetRecordValue[[]any](record, "cast")
 			d3Response.Nodes = append(d3Response.Nodes, Node{Title: title, Label: "movie"})
-			movIdx := len(d3Response.Nodes) - 1
-			for _, actor := range actors {
-				idx := -1
-				for i, node := range d3Response.Nodes {
-					if actor == node.Title && node.Label == "actor" {
-						idx = i
-						break
-					}
-				}
-				if idx == -1 {
-					d3Response.Nodes = append(d3Response.Nodes, Node{Title: actor.(string), Label: "actor"})
-					d3Response.Links = append(d3Response.Links, Link{Source: len(d3Response.Nodes) - 1, Target: movIdx})
+			movieIndex := len(d3Response.Nodes) - 1
+			for _, actor := range cast {
+				actorName := actor.(string)
+				if actorIndex, found := allActors[actorName]; found {
+					d3Response.Links = append(d3Response.Links, Link{Source: actorIndex, Target: movieIndex})
 				} else {
-					d3Response.Links = append(d3Response.Links, Link{Source: idx, Target: movIdx})
+					d3Response.Nodes = append(d3Response.Nodes, Node{Title: actorName, Label: "actor"})
+					newActorIndex := len(d3Response.Nodes) - 1
+					d3Response.Links = append(d3Response.Links, Link{Source: newActorIndex, Target: movieIndex})
+					allActors[actorName] = newActorIndex
 				}
 			}
 		}
