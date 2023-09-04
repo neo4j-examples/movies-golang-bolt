@@ -22,7 +22,7 @@ jobs:
       id: go
 
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Build
       run: go build -v .
@@ -60,9 +60,9 @@ jobs:
       - name: Import dataset
         run: docker exec --interactive neo4j-e2e cypher-shell -u neo4j -p 'letmein!' --file /movies/movies.cypher
       - name: Check out project sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Check out test harness sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: neo4j-examples/movies-harness
           path: e2e
