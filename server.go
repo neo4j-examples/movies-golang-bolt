@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
+	"github.com/neo4j/neo4j-go-driver/v6/neo4j"
 )
 
 type MovieResult struct {
@@ -60,8 +60,8 @@ type Neo4jConfiguration struct {
 	Database string
 }
 
-func (nc *Neo4jConfiguration) newDriver() (neo4j.DriverWithContext, error) {
-	return neo4j.NewDriverWithContext(nc.Url, neo4j.BasicAuth(nc.Username, nc.Password, ""))
+func (nc *Neo4jConfiguration) newDriver() (neo4j.Driver, error) {
+	return neo4j.NewDriver(nc.Url, neo4j.BasicAuth(nc.Username, nc.Password, ""))
 }
 
 func defaultHandler(w http.ResponseWriter, req *http.Request) {
@@ -77,7 +77,7 @@ func defaultHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func searchHandlerFunc(ctx context.Context, driver neo4j.DriverWithContext, database string) func(http.ResponseWriter, *http.Request) {
+func searchHandlerFunc(ctx context.Context, driver neo4j.Driver, database string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -108,7 +108,7 @@ func searchHandlerFunc(ctx context.Context, driver neo4j.DriverWithContext, data
 	}
 }
 
-func movieHandlerFunc(ctx context.Context, driver neo4j.DriverWithContext, database string) func(http.ResponseWriter, *http.Request) {
+func movieHandlerFunc(ctx context.Context, driver neo4j.Driver, database string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -154,7 +154,7 @@ func movieHandlerFunc(ctx context.Context, driver neo4j.DriverWithContext, datab
 	}
 }
 
-func voteInMovieHandlerFunc(ctx context.Context, driver neo4j.DriverWithContext, database string) func(http.ResponseWriter, *http.Request) {
+func voteInMovieHandlerFunc(ctx context.Context, driver neo4j.Driver, database string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -179,7 +179,7 @@ func voteInMovieHandlerFunc(ctx context.Context, driver neo4j.DriverWithContext,
 	}
 }
 
-func graphHandler(ctx context.Context, driver neo4j.DriverWithContext, database string) func(http.ResponseWriter, *http.Request) {
+func graphHandler(ctx context.Context, driver neo4j.Driver, database string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
