@@ -1,5 +1,5 @@
 module github.com/neo4j-examples/movies-golang-bolt
 
-go 1.20
+go 1.24
 
-require github.com/neo4j/neo4j-go-driver/v5 v5.27.0
+require github.com/neo4j/neo4j-go-driver/v6 v6.0.0
