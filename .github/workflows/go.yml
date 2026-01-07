@@ -19,13 +19,13 @@ jobs:
     steps:
 
     - name: Set up Go 1.x
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
       with:
         go-version: ^1.24
       id: go
 
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v4
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
     - name: Build
       run: go build -v .
@@ -54,7 +54,7 @@ jobs:
           --volume /tmp:/movies
     steps:
       - name: Set up Go 1.x
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version: ^1.24
         id: go
@@ -63,14 +63,14 @@ jobs:
       - name: Import dataset
         run: docker exec --interactive neo4j-e2e cypher-shell -u neo4j -p 'letmein!' --file /movies/movies.cypher
       - name: Check out project sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Check out test harness sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: neo4j-examples/movies-harness
           path: e2e
           ref: ${{ github.event.client_payload.sha }}
-      - uses: cypress-io/github-action@v6
+      - uses: cypress-io/github-action@2ad32e649e4db26c07674ebae31a297601dbcbaf # v6.10.8
         env:
           NEO4J_VERSION: ${{ matrix.neo4j-version }}
           NEO4J_URI: bolt://localhost
