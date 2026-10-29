@@ -2,19 +2,19 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
-	"path/filepath"
-	"runtime"
 	"strconv"
-	"strings"
 
 	"github.com/neo4j/neo4j-go-driver/v6/neo4j"
 )
+
+//go:embed public/index.html
+var indexPage []byte
 
 type MovieResult struct {
 	Movie `json:"movie"`
@@ -25,17 +25,22 @@ type VoteResult struct {
 }
 
 type Movie struct {
-	Released int64    `json:"released"`
-	Title    string   `json:"title,omitempty"`
-	Tagline  string   `json:"tagline,omitempty"`
-	Votes    int64    `json:"votes,omitempty"`
-	Cast     []Person `json:"cast,omitempty"`
+	Released int64    `json:"released" neo4j:"released"`
+	Title    string   `json:"title,omitempty" neo4j:"title"`
+	Tagline  string   `json:"tagline,omitempty" neo4j:"tagline"`
+	Votes    int64    `json:"votes,omitempty" neo4j:"votes"`
+	Cast     []Person `json:"cast,omitempty" neo4j:"-"`
 }
 
 type Person struct {
-	Job  string   `json:"job"`
-	Role []string `json:"role"`
-	Name string   `json:"name"`
+	Job  string   `json:"job" neo4j:"job"`
+	Role []string `json:"role" neo4j:"role"`
+	Name string   `json:"name" neo4j:"name"`
+}
+
+type MovieCast struct {
+	Title  string   `neo4j:"movie"`
+	Actors []string `neo4j:"cast"`
 }
 
 type D3Response struct {
@@ -64,42 +69,31 @@ func (nc *Neo4jConfiguration) newDriver() (neo4j.Driver, error) {
 	return neo4j.NewDriver(nc.Url, neo4j.BasicAuth(nc.Username, nc.Password, ""))
 }
 
-func defaultHandler(w http.ResponseWriter, req *http.Request) {
-	_, file, _, _ := runtime.Caller(0)
-	page := filepath.Join(filepath.Dir(file), "public", "index.html")
-	if body, err := os.ReadFile(page); err != nil {
-		w.WriteHeader(500)
-		w.Header().Set("Content-Type", "text/plain")
-		_, _ = w.Write([]byte(err.Error()))
-	} else {
-		w.Header().Set("Content-Type", "text/html;charset=utf-8")
-		_, _ = w.Write(body)
-	}
+func defaultHandler(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/html;charset=utf-8")
+	_, _ = w.Write(indexPage)
 }
 
-func searchHandlerFunc(ctx context.Context, driver neo4j.Driver, database string) func(http.ResponseWriter, *http.Request) {
+func searchHandlerFunc(driver neo4j.Driver, database string) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		result, err := neo4j.ExecuteQuery(ctx, driver, `MATCH (movie:Movie)
+		result, err := neo4j.ExecuteQuery(req.Context(), driver, `MATCH (movie:Movie)
 				 WHERE toLower(movie.title) CONTAINS toLower($title)
 				 RETURN movie.title AS title, movie.tagline AS tagline, movie.votes AS votes, movie.released AS released`,
-			map[string]interface{}{"title": req.URL.Query().Get("q")},
+			map[string]any{"title": req.URL.Query().Get("q")},
 			neo4j.EagerResultTransformer,
 			neo4j.ExecuteQueryWithReadersRouting(),
 			neo4j.ExecuteQueryWithDatabase(database))
 		if err != nil {
-			log.Println("error querying search:", err)
+			serverError(w, "error querying search:", err)
 			return
 		}
 
-		movies := make([]MovieResult, len(result.Records))
-		for i, record := range result.Records {
-			released, _, _ := neo4j.GetRecordValue[int64](record, "released")
-			title, _, _ := neo4j.GetRecordValue[string](record, "title")
-			tagline, _, _ := neo4j.GetRecordValue[string](record, "tagline")
-			votes, _, _ := neo4j.GetRecordValue[int64](record, "votes")
-			movies[i] = MovieResult{Movie{Released: released, Title: title, Tagline: tagline, Votes: votes}}
+		movies, err := neo4j.CollectRecordsAs[MovieResult](result.Records)
+		if err != nil {
+			serverError(w, "error mapping search results:", err)
+			return
 		}
 		err = json.NewEncoder(w).Encode(movies)
 		if err != nil {
@@ -108,12 +102,11 @@ func searchHandlerFunc(ctx context.Context, driver neo4j.Driver, database string
 	}
 }
 
-func movieHandlerFunc(ctx context.Context, driver neo4j.Driver, database string) func(http.ResponseWriter, *http.Request) {
+func movieHandlerFunc(driver neo4j.Driver, database string) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		title, _ := url.QueryUnescape(req.URL.Path[len("/movie/"):])
-		result, err := neo4j.ExecuteQuery(ctx, driver, `MATCH (movie:Movie {title:$title})
+		result, err := neo4j.ExecuteQuery(req.Context(), driver, `MATCH (movie:Movie {title:$title})
 				OPTIONAL MATCH (movie)<-[r]-(person:Person)
 				WITH movie.title AS title,
 					 collect({
@@ -124,28 +117,23 @@ func movieHandlerFunc(ctx context.Context, driver neo4j.Driver, database string)
 				LIMIT 1
 				UNWIND cast as c
 				RETURN title, c.name as name, c.job as job, c.role as role`,
-			map[string]interface{}{"title": title},
+			map[string]any{"title": req.PathValue("title")},
 			neo4j.EagerResultTransformer,
 			neo4j.ExecuteQueryWithReadersRouting(),
 			neo4j.ExecuteQueryWithDatabase(database))
-
-		var movie Movie
-		for _, record := range result.Records {
-			title, _, _ := neo4j.GetRecordValue[string](record, "title")
-			movie.Title = title
-			name, _, _ := neo4j.GetRecordValue[string](record, "name")
-			job, _, _ := neo4j.GetRecordValue[string](record, "job")
-			role, _ := record.Get("role")
-			switch role.(type) {
-			case []any:
-				movie.Cast = append(movie.Cast, Person{Name: name, Job: job, Role: toStringSlice(role.([]any))})
-			default: // handle nulls or unexpected stuff
-				movie.Cast = append(movie.Cast, Person{Name: name, Job: job})
-			}
-		}
 		if err != nil {
-			log.Println("error querying movie:", err)
+			serverError(w, "error querying movie:", err)
 			return
+		}
+
+		cast, err := neo4j.CollectRecordsAs[Person](result.Records)
+		if err != nil {
+			serverError(w, "error mapping movie cast:", err)
+			return
+		}
+		movie := Movie{Cast: cast}
+		if len(result.Records) > 0 {
+			movie.Title, _, _ = neo4j.GetRecordValue[string](result.Records[0], "title")
 		}
 		err = json.NewEncoder(w).Encode(movie)
 		if err != nil {
@@ -154,24 +142,21 @@ func movieHandlerFunc(ctx context.Context, driver neo4j.Driver, database string)
 	}
 }
 
-func voteInMovieHandlerFunc(ctx context.Context, driver neo4j.Driver, database string) func(http.ResponseWriter, *http.Request) {
+func voteInMovieHandlerFunc(driver neo4j.Driver, database string) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		title, _ := url.QueryUnescape(req.URL.Path[len("/movie/vote/"):])
-		result, err := neo4j.ExecuteQuery(ctx, driver, `MATCH (m:Movie {title: $title})
+		result, err := neo4j.ExecuteQuery(req.Context(), driver, `MATCH (m:Movie {title: $title})
 				SET m.votes = coalesce(m.votes, 0) + 1`,
-			map[string]interface{}{"title": title},
+			map[string]any{"title": req.PathValue("title")},
 			neo4j.EagerResultTransformer,
 			neo4j.ExecuteQueryWithDatabase(database))
-
-		var vote VoteResult
-		vote.Updates = result.Summary.Counters().PropertiesSet()
-
 		if err != nil {
-			log.Println("error voting for movie:", err)
+			serverError(w, "error voting for movie:", err)
 			return
 		}
+
+		vote := VoteResult{Updates: result.Summary.Counters().PropertiesSet()}
 		err = json.NewEncoder(w).Encode(vote)
 		if err != nil {
 			log.Println("error writing vote result response:", err)
@@ -179,27 +164,33 @@ func voteInMovieHandlerFunc(ctx context.Context, driver neo4j.Driver, database s
 	}
 }
 
-func graphHandler(ctx context.Context, driver neo4j.Driver, database string) func(http.ResponseWriter, *http.Request) {
+func graphHandler(driver neo4j.Driver, database string) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		result, err := neo4j.ExecuteQuery(ctx, driver, `MATCH (m:Movie)<-[:ACTED_IN]-(a:Person)
+		result, err := neo4j.ExecuteQuery(req.Context(), driver, `MATCH (m:Movie)<-[:ACTED_IN]-(a:Person)
 				  RETURN m.title AS movie, collect(a.name) AS cast
 				  LIMIT $limit `,
-			map[string]interface{}{"limit": parseLimit(req)},
+			map[string]any{"limit": parseLimit(req)},
 			neo4j.EagerResultTransformer,
 			neo4j.ExecuteQueryWithReadersRouting(),
 			neo4j.ExecuteQueryWithDatabase(database))
+		if err != nil {
+			serverError(w, "error querying graph:", err)
+			return
+		}
 
+		movies, err := neo4j.CollectRecordsAs[MovieCast](result.Records)
+		if err != nil {
+			serverError(w, "error mapping graph:", err)
+			return
+		}
 		var d3Response D3Response
 		allActors := make(map[string]int)
-		for _, record := range result.Records {
-			title, _, _ := neo4j.GetRecordValue[string](record, "movie")
-			cast, _, _ := neo4j.GetRecordValue[[]any](record, "cast")
-			d3Response.Nodes = append(d3Response.Nodes, Node{Title: title, Label: "movie"})
+		for _, movie := range movies {
+			d3Response.Nodes = append(d3Response.Nodes, Node{Title: movie.Title, Label: "movie"})
 			movieIndex := len(d3Response.Nodes) - 1
-			for _, actor := range cast {
-				actorName := actor.(string)
+			for _, actorName := range movie.Actors {
 				if actorIndex, found := allActors[actorName]; found {
 					d3Response.Links = append(d3Response.Links, Link{Source: actorIndex, Target: movieIndex})
 				} else {
@@ -210,10 +201,6 @@ func graphHandler(ctx context.Context, driver neo4j.Driver, database string) fun
 				}
 			}
 		}
-		if err != nil {
-			log.Println("error querying graph:", err)
-			return
-		}
 		err = json.NewEncoder(w).Encode(d3Response)
 		if err != nil {
 			log.Println("error writing graph response:", err)
@@ -221,73 +208,65 @@ func graphHandler(ctx context.Context, driver neo4j.Driver, database string) fun
 	}
 }
 
-func toStringSlice(slice []interface{}) []string {
-	var result []string
-	for _, e := range slice {
-		result = append(result, e.(string))
-	}
-	return result
+func serverError(w http.ResponseWriter, message string, err error) {
+	log.Println(message, err)
+	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	ctx := context.Background()
 	configuration := parseConfiguration()
 	driver, err := configuration.newDriver()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	defer unsafeClose(ctx, driver)
-	serveMux := http.NewServeMux()
-	serveMux.HandleFunc("/", defaultHandler)
-	serveMux.HandleFunc("/search", searchHandlerFunc(ctx, driver, configuration.Database))
-	serveMux.HandleFunc("/movie/vote/", voteInMovieHandlerFunc(ctx, driver, configuration.Database))
-	serveMux.HandleFunc("/movie/", movieHandlerFunc(ctx, driver, configuration.Database))
-	serveMux.HandleFunc("/graph", graphHandler(ctx, driver, configuration.Database))
+	defer func() {
+		if err := driver.Close(ctx); err != nil {
+			log.Println("error closing driver:", err)
+		}
+	}()
+	if err := driver.VerifyConnectivity(ctx); err != nil {
+		return fmt.Errorf("could not connect to %s: %w", configuration.Url, err)
+	}
 
-	var port string
-	var found bool
-	if port, found = os.LookupEnv("PORT"); !found {
-		port = "8080"
-	}
+	serveMux := http.NewServeMux()
+	serveMux.HandleFunc("GET /", defaultHandler)
+	serveMux.HandleFunc("GET /search", searchHandlerFunc(driver, configuration.Database))
+	serveMux.HandleFunc("GET /movie/{title}", movieHandlerFunc(driver, configuration.Database))
+	serveMux.HandleFunc("POST /movie/vote/{title}", voteInMovieHandlerFunc(driver, configuration.Database))
+	serveMux.HandleFunc("GET /graph", graphHandler(driver, configuration.Database))
+
+	port := lookupEnvOrGetDefault("PORT", "8080")
 	fmt.Printf("Running on port %s, database is at %s\n", port, configuration.Url)
-	panic(http.ListenAndServe(":"+port, serveMux))
+	return http.ListenAndServe(":"+port, serveMux)
 }
 
 func parseLimit(req *http.Request) int {
-	limits := req.URL.Query()["limit"]
-	limit := 50
-	if len(limits) > 0 {
-		var err error
-		if limit, err = strconv.Atoi(limits[0]); err != nil {
-			limit = 50
-		}
+	limit, err := strconv.Atoi(req.URL.Query().Get("limit"))
+	if err != nil {
+		return 50
 	}
 	return limit
 }
 
 func parseConfiguration() *Neo4jConfiguration {
-	database := lookupEnvOrGetDefault("NEO4J_DATABASE", "movies")
-	if !strings.HasPrefix(lookupEnvOrGetDefault("NEO4J_VERSION", "4"), "4") {
-		database = ""
-	}
 	return &Neo4jConfiguration{
 		Url:      lookupEnvOrGetDefault("NEO4J_URI", "neo4j+s://demo.neo4jlabs.com"),
 		Username: lookupEnvOrGetDefault("NEO4J_USER", "movies"),
 		Password: lookupEnvOrGetDefault("NEO4J_PASSWORD", "movies"),
-		Database: database,
+		Database: lookupEnvOrGetDefault("NEO4J_DATABASE", "movies"),
 	}
 }
 
 func lookupEnvOrGetDefault(key string, defaultValue string) string {
-	if env, found := os.LookupEnv(key); !found {
-		return defaultValue
-	} else {
+	if env, found := os.LookupEnv(key); found {
 		return env
 	}
-}
-
-func unsafeClose(ctx context.Context, closeable interface{ Close(context.Context) error }) {
-	if err := closeable.Close(ctx); err != nil {
-		log.Fatal(fmt.Errorf("could not close resource: %w", err))
-	}
+	return defaultValue
 }
