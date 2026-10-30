@@ -5,10 +5,10 @@ updates:
   schedule:
     interval: daily
   assignees:
-    - fbiville
+    - StephenCathcart
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
     interval: daily
   assignees:
-  - fbiville
+  - StephenCathcart
